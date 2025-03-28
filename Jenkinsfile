@@ -1,42 +1,37 @@
-pipeline{
+pipeline {
     agent any
+tools{
+      maven 'M2_HOME'
+          }
     stages{
-        stage('checkout the code from github'){
+        stage('Build Maven'){
             steps{
-                 git url: 'https://github.com/akshu20791/health-care-project/'
-                 echo 'github url checkout'
+                git url:'https://github.com/Augustine78/Healthcare-project.git', branch: "master"
+               sh 'mvn clean package'
             }
         }
-        stage('codecompile with akshat'){
+        stage('Build docker image'){
             steps{
-                echo 'starting compiling'
-                sh 'mvn compile'
+                script{
+                    sh 'docker build -t augustine325/medicure:1.0 .'
+                }
             }
         }
-        stage('codetesting with akshat'){
-            steps{
-                sh 'mvn test'
+          stage('Docker login') {
+            steps {
+                withCredentials([string(credentialsId: 'docker', variable: 'dockervar')]){
+                    sh 'docker login -u augustine325 -p ${dockervar}'
+                    sh 'docker push augustine325/medicure:1.0'
+                }
             }
         }
-        stage('qa with akshat'){
-            steps{
-                sh 'mvn checkstyle:checkstyle'
+
+         stage('Ansible Playbook') {
+      steps {
+        ansiblePlaybook credentialsId: 'sshkey', disableHostKeyChecking: true, installation: 'ansible', inventory: '/etc/ansible/hosts', playbook: 'deploy.yml', vaultTmpPath: ''
+                                       }
             }
-        }
-        stage('package with akshat'){
-            steps{
-                sh 'mvn package'
-            }
-        }
-        stage('run dockerfile'){
-          steps{
-               sh 'docker build -t myimg1 .'
-           }
-         }
-        stage('port expose'){
-            steps{
-                sh 'docker run -dt -p 8082:8082 --name c001 myimg1'
-            }
-        }   
+       
+            
     }
 }
